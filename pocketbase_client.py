@@ -64,19 +64,38 @@ def _post(ruta: str, datos: dict) -> dict:
     return _pedir("POST", ruta, datos)
 
 
-def listar_usuarios(token: str) -> list[dict]:
-    """Lista todas las cuentas (solo funciona para un admin)."""
+def _listar(coleccion: str, orden: str, token: str) -> list[dict]:
     items, pagina = [], 1
     while True:
         r = _pedir(
             "GET",
-            f"/api/collections/{COLECCION}/records?perPage=200&page={pagina}&sort=email",
+            f"/api/collections/{coleccion}/records?perPage=200&page={pagina}&sort={orden}",
             token=token,
         )
         items += r["items"]
         if pagina >= r["totalPages"]:
             return items
         pagina += 1
+
+
+def listar_usuarios(token: str) -> list[dict]:
+    """Lista todas las cuentas (solo funciona para un admin)."""
+    return _listar(COLECCION, "email", token)
+
+
+def crear_consulta(token: str, usuario_id: str, monto: float, cotizacion: float, resultado: float) -> dict:
+    """Guarda una conversión del usuario autenticado; la fecha la fija el servidor."""
+    return _pedir(
+        "POST",
+        "/api/collections/consultas/records",
+        {"usuario": usuario_id, "monto": monto, "cotizacion": cotizacion, "resultado": resultado},
+        token,
+    )
+
+
+def listar_consultas(token: str) -> list[dict]:
+    """Conversiones del usuario autenticado (el servidor filtra las ajenas), más recientes primero."""
+    return _listar("consultas", "-fecha", token)
 
 
 def cambiar_estado(token: str, usuario_id: str, desactivado: bool) -> dict:

@@ -43,12 +43,16 @@ El sistema MUST rechazar con un mensaje de error los valores no numéricos, los 
 - **THEN** el sistema informa que el monto no puede ser negativo
 
 ### Requirement: Historial de conversiones
-El sistema SHALL agregar una línea a `historial.txt` por cada conversión exitosa, con fecha y hora, email del usuario, monto en pesos, cotización y resultado en dólares.
+El sistema SHALL guardar en PocketBase un registro por cada conversión exitosa, asociado al usuario que inició sesión, con monto en pesos, cotización, resultado en dólares y fecha y hora; el sistema MUST NOT escribir `historial.txt`.
 
 #### Scenario: Conversión registrada
 - **WHEN** el usuario completa una conversión válida
-- **THEN** se añade a `historial.txt` una línea con fecha y hora, su email, el monto, la cotización y el resultado
+- **THEN** se crea una consulta en PocketBase con su usuario, el monto, la cotización, el resultado y la fecha y hora
 
 #### Scenario: Ubicación del archivo
-- **WHEN** la aplicación se ejecuta como programa empaquetado
-- **THEN** `historial.txt` se guarda en la misma carpeta que el ejecutable
+- **WHEN** la aplicación se ejecuta como programa empaquetado y el usuario completa una conversión válida
+- **THEN** el sistema no crea ni modifica `historial.txt` junto al ejecutable, porque el historial vive en PocketBase
+
+#### Scenario: No se pudo guardar
+- **WHEN** PocketBase no responde o rechaza el guardado
+- **THEN** el sistema muestra igualmente el resultado y avisa que la conversión no quedó registrada

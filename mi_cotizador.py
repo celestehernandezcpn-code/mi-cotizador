@@ -1,25 +1,13 @@
-"""Mi Cotizador: convierte pesos a dólares y guarda cada conversión en historial.txt.
+"""Mi Cotizador: convierte pesos a dólares y guarda cada conversión en PocketBase.
 
 Requiere iniciar sesión con un usuario de PocketBase antes de abrir el conversor.
 """
 import re
-import sys
 import tkinter as tk
 from datetime import datetime
-from pathlib import Path
 from tkinter import messagebox, simpledialog, ttk
 
 import pocketbase_client as pb
-
-
-def carpeta_base() -> Path:
-    """Carpeta del .exe (si está empaquetado) o del script."""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent
-
-
-HISTORIAL = carpeta_base() / "historial.txt"
 
 
 def parsear_numero(texto: str) -> float:
@@ -42,14 +30,71 @@ def convertir_pesos_a_dolares(pesos: float, cotizacion: float) -> float:
     return pesos / cotizacion
 
 
-def guardar_historial(pesos: float, cotizacion: float, dolares: float, usuario: str = "") -> None:
-    ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    linea = (
-        f"{ahora} | {usuario} | ARS {formatear(pesos)} | cotización {formatear(cotizacion)} "
-        f"| USD {formatear(dolares)}\n"
-    )
-    with open(HISTORIAL, "a", encoding="utf-8") as f:
-        f.write(linea)
+def formatear_fecha(fecha_pb: str) -> str:
+    """Convierte la fecha UTC de PocketBase ('2026-11-16 21:27:18.145Z') a hora local."""
+    try:
+        f = datetime.fromisoformat(fecha_pb.replace("Z", "+00:00"))
+        return f.astimezone().strftime("%d/%m/%Y %H:%M:%S")
+    except ValueError:
+        return fecha_pb
+
+
+class PantallaHistorial(ttk.Frame):
+    """Conversiones del usuario que inició sesión (el servidor no devuelve las ajenas)."""
+
+    def __init__(self, app: "MiCotizador") -> None:
+        super().__init__(app, padding=15)
+        self.app = app
+        ttk.Label(self, text="Mi historial", font=("Segoe UI", 14, "bold")).grid(
+            row=0, column=0, sticky="w"
+        )
+        ttk.Label(self, text=f"Sesión: {app.email_actual}", foreground="gray").grid(
+            row=1, column=0, sticky="w", pady=(0, 8)
+        )
+        self.tabla = ttk.Treeview(
+            self, columns=("fecha", "monto", "cotizacion", "resultado"), show="headings",
+            height=10, selectmode="none",
+        )
+        for col, titulo, ancho, ancla in (
+            ("fecha", "Fecha y hora", 150, "w"), ("monto", "Monto (ARS)", 120, "e"),
+            ("cotizacion", "Cotización", 100, "e"), ("resultado", "Resultado (USD)", 120, "e"),
+        ):
+            self.tabla.heading(col, text=titulo)
+            self.tabla.column(col, width=ancho, anchor=ancla)
+        self.tabla.grid(row=2, column=0, sticky="nsew")
+        barra = ttk.Scrollbar(self, orient="vertical", command=self.tabla.yview)
+        self.tabla.configure(yscrollcommand=barra.set)
+        barra.grid(row=2, column=1, sticky="ns")
+
+        self.vacio = ttk.Label(self, text="Todavía no hay conversiones.", foreground="gray")
+        botones = ttk.Frame(self)
+        botones.grid(row=4, column=0, columnspan=2, pady=(10, 0), sticky="w")
+        ttk.Button(botones, text="Actualizar", command=self.cargar).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(botones, text="Volver al conversor", command=app.mostrar_conversor).grid(
+            row=0, column=1, padx=6
+        )
+        self.cargar()
+
+    def cargar(self) -> None:
+        try:
+            lista = pb.listar_consultas(self.app.token)
+        except pb.ErrorPB as e:
+            messagebox.showerror("Historial", str(e))
+            if str(e).startswith("No tenés permisos"):
+                self.app.cerrar_sesion()
+            return
+        self.tabla.delete(*self.tabla.get_children())
+        for c in lista:
+            self.tabla.insert("", "end", values=(
+                formatear_fecha(c.get("fecha", "")),
+                formatear(c.get("monto") or 0),
+                formatear(c.get("cotizacion") or 0),
+                formatear(c.get("resultado") or 0),
+            ))
+        if lista:
+            self.vacio.grid_remove()
+        else:
+            self.vacio.grid(row=3, column=0, columnspan=2, pady=(8, 0))
 
 
 class PantallaLogin(ttk.Frame):
@@ -185,8 +230,11 @@ class PantallaAdmin(ttk.Frame):
         ttk.Button(botones, text="Abrir conversor", command=app.mostrar_conversor).grid(
             row=0, column=3, padx=6
         )
+        ttk.Button(botones, text="Mi historial", command=app.mostrar_historial).grid(
+            row=0, column=4, padx=6
+        )
         ttk.Button(botones, text="Cerrar sesión", command=app.cerrar_sesion).grid(
-            row=0, column=4, padx=(6, 0)
+            row=0, column=5, padx=(6, 0)
         )
         self.cargar()
 
@@ -271,11 +319,14 @@ class PantallaConversor(ttk.Frame):
         )
         barra = ttk.Frame(self)
         barra.grid(row=0, column=1, sticky="e")
+        ttk.Button(barra, text="Mi historial", command=app.mostrar_historial).grid(
+            row=0, column=0, padx=(0, 6)
+        )
         if app.es_admin:
             ttk.Button(barra, text="Panel admin", command=app.mostrar_admin).grid(
-                row=0, column=0, padx=(0, 6)
+                row=0, column=1, padx=(0, 6)
             )
-        ttk.Button(barra, text="Cerrar sesión", command=app.cerrar_sesion).grid(row=0, column=1)
+        ttk.Button(barra, text="Cerrar sesión", command=app.cerrar_sesion).grid(row=0, column=2)
 
         ttk.Label(self, text="Monto en pesos (ARS):").grid(row=1, column=0, sticky="w", pady=5)
         self.monto = ttk.Entry(self, width=22)
@@ -311,9 +362,11 @@ class PantallaConversor(ttk.Frame):
 
         self.resultado.config(text=f"Resultado: USD {formatear(dolares)}")
         try:
-            guardar_historial(pesos, cotiz, dolares, self.usuario)
-        except OSError as e:
-            messagebox.showwarning("Historial", f"No se pudo guardar el historial:\n{e}")
+            pb.crear_consulta(self.app.token, self.app.sesion["record"]["id"], pesos, cotiz, dolares)
+        except pb.ErrorPB as e:
+            messagebox.showwarning(
+                "Historial", f"La conversión no quedó registrada en tu historial:\n{e}"
+            )
 
 
 class MiCotizador(tk.Tk):
@@ -370,6 +423,9 @@ class MiCotizador(tk.Tk):
 
     def mostrar_conversor(self) -> None:
         self._mostrar(PantallaConversor(self, self.email_actual))
+
+    def mostrar_historial(self) -> None:
+        self._mostrar(PantallaHistorial(self))
 
     def mostrar_admin(self) -> None:
         if not self.es_admin:  # defensa extra: el servidor igualmente rechaza a los no admin
