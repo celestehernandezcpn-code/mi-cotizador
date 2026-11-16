@@ -1,4 +1,4 @@
-# Proposal
+﻿# Proposal
 
 ## Why
 
@@ -7,7 +7,7 @@ La dirección de PocketBase solo se puede cambiar con una variable de entorno de
 ## What Changes
 
 - La aplicación lee la dirección de PocketBase (`MI_COTIZADOR_PB_URL`) de un archivo `.env` ubicado junto al ejecutable o al script.
-- Una variable de entorno del sistema sigue teniendo prioridad sobre el `.env`; sin ninguna de las dos se usa `http://127.0.0.1:8090`.
+- Una variable de entorno del sistema sigue teniendo prioridad sobre el `.env`; sin ninguna de las dos se usaba un valor por defecto (retirado después en el cambio `sin-url-por-defecto`).
 - Se agrega `.env.example` con los nombres de las variables y sin valores, y `.env` se excluye de Git.
 - No hay contraseñas ni secretos en el código, por lo que no se traslada ninguno; el `.env` contiene solo la dirección.
 

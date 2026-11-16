@@ -1,4 +1,4 @@
-# Spec Delta
+﻿# Spec Delta
 
 ## Purpose
 
@@ -59,7 +59,7 @@ El sistema SHALL permitir cerrar sesión desde el conversor y el panel de admini
 - **THEN** vuelve a la pantalla de inicio de sesión y debe autenticarse de nuevo para usar el conversor
 
 ### Requirement: Servidor no disponible
-El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con PocketBase, cuya dirección por defecto es `http://127.0.0.1:8090` y es configurable.
+El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con PocketBase, cuya dirección es configurable.
 
 #### Scenario: PocketBase apagado
 - **WHEN** el usuario intenta iniciar sesión o registrarse y el servidor no responde

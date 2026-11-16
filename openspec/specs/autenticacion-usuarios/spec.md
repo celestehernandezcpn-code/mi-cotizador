@@ -58,11 +58,11 @@ El sistema SHALL permitir cerrar sesión desde el conversor y el panel de admini
 - **THEN** vuelve a la pantalla de inicio de sesión y debe autenticarse de nuevo para usar el conversor
 
 ### Requirement: Servidor no disponible
-El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con PocketBase. La dirección se toma de `MI_COTIZADOR_PB_URL`, definida en el entorno o en un archivo `.env` junto a la aplicación, y por defecto es `http://127.0.0.1:8090`.
+El sistema SHALL informar con un mensaje claro, sin mostrar la dirección del servidor, cuando no pueda conectarse con PocketBase. La dirección se toma de `MI_COTIZADOR_PB_URL`, definida en el entorno o en un archivo `.env` junto a la aplicación, y el sistema MUST NOT incluir una dirección por defecto.
 
 #### Scenario: PocketBase apagado
 - **WHEN** el usuario intenta iniciar sesión o registrarse y el servidor no responde
-- **THEN** el sistema indica que no pudo conectarse y que verifique que el servidor esté en marcha
+- **THEN** el sistema indica que no pudo conectarse y que verifique que el servidor esté en marcha, sin mostrar la dirección
 
 #### Scenario: Dirección desde el archivo .env
 - **WHEN** existe un `.env` junto a la aplicación con `MI_COTIZADOR_PB_URL` definida
@@ -74,4 +74,4 @@ El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con Po
 
 #### Scenario: Sin configuración
 - **WHEN** no hay `.env` ni variable de entorno, o la variable está vacía
-- **THEN** el sistema usa `http://127.0.0.1:8090`
+- **THEN** el sistema avisa que falta configurar `MI_COTIZADOR_PB_URL` y no intenta conectarse

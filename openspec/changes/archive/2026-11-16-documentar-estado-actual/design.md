@@ -1,4 +1,4 @@
-## Context
+﻿## Context
 
 Este cambio es retroactivo: describe decisiones de diseño ya implementadas en Mi Cotizador, una aplicación de escritorio en Python (tkinter) empaquetada con PyInstaller, que usa PocketBase como servicio de cuentas.
 
@@ -23,6 +23,6 @@ Este cambio es retroactivo: describe decisiones de diseño ya implementadas en M
 
 ## Risks / Trade-offs
 
-- La dirección de PocketBase por defecto es local (`127.0.0.1:8090`); fuera de esa computadora hay que configurar `MI_COTIZADOR_PB_URL` y la conexión no está cifrada salvo que se use HTTPS.
+- La dirección de PocketBase por defecto era local; fuera de esa computadora hay que configurar `MI_COTIZADOR_PB_URL` y la conexión no está cifrada salvo que se use HTTPS.
 - Una sesión ya iniciada de un usuario desactivado sigue vigente hasta que venza, aunque las reglas le quitan permisos de lectura y edición.
 - El historial no es por usuario ni se protege: cualquiera con acceso a la carpeta puede leerlo o editarlo.

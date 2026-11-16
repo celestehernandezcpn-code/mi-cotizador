@@ -6,9 +6,6 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-URL_POR_DEFECTO = "http://127.0.0.1:8090"
-
-
 def carpeta_base() -> Path:
     """Carpeta del .exe (si está empaquetado) o del script."""
     if getattr(sys, "frozen", False):
@@ -36,9 +33,9 @@ def leer_env(ruta: Path) -> dict[str, str]:
 
 
 def resolver_url(entorno: dict, env_archivo: dict) -> str:
-    """Prioridad: variable de entorno > .env > valor por defecto (vacío = no definido)."""
+    """Prioridad: variable de entorno > .env. Sin configuración devuelve '' (no hay valor por defecto)."""
     url = entorno.get("MI_COTIZADOR_PB_URL") or env_archivo.get("MI_COTIZADOR_PB_URL")
-    return (url or URL_POR_DEFECTO).rstrip("/")
+    return (url or "").strip().rstrip("/")
 
 
 PB_URL = resolver_url(os.environ, leer_env(carpeta_base() / ".env"))
@@ -50,6 +47,11 @@ class ErrorPB(Exception):
 
 
 def _pedir(metodo: str, ruta: str, datos: dict | None = None, token: str = "") -> dict:
+    if not PB_URL:
+        raise ErrorPB(
+            "Falta configurar la dirección de PocketBase.\n"
+            "Definí MI_COTIZADOR_PB_URL en el archivo .env (ver .env.example)."
+        )
     cabeceras = {"Content-Type": "application/json"}
     if token:
         cabeceras["Authorization"] = token
@@ -70,7 +72,7 @@ def _pedir(metodo: str, ruta: str, datos: dict | None = None, token: str = "") -
         raise ErrorPB(_mensaje_error(e.code, cuerpo)) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise ErrorPB(
-            f"No se pudo conectar con PocketBase en {PB_URL}.\n"
+            "No se pudo conectar con PocketBase.\n"
             "Verificá que el servidor esté en marcha."
         ) from None
 

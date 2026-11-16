@@ -1,9 +1,9 @@
-# Spec Delta
+﻿# Spec Delta
 
 ## MODIFIED Requirements
 
 ### Requirement: Servidor no disponible
-El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con PocketBase. La dirección se toma de `MI_COTIZADOR_PB_URL`, definida en el entorno o en un archivo `.env` junto a la aplicación, y por defecto es `http://127.0.0.1:8090`.
+El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con PocketBase. La dirección se toma de `MI_COTIZADOR_PB_URL`, definida en el entorno o en un archivo `.env` junto a la aplicación, con un valor por defecto (retirado después en el cambio `sin-url-por-defecto`).
 
 #### Scenario: PocketBase apagado
 - **WHEN** el usuario intenta iniciar sesión o registrarse y el servidor no responde
@@ -19,4 +19,4 @@ El sistema SHALL informar con un mensaje claro cuando no pueda conectarse con Po
 
 #### Scenario: Sin configuración
 - **WHEN** no hay `.env` ni variable de entorno, o la variable está vacía
-- **THEN** el sistema usa `http://127.0.0.1:8090`
+- **THEN** el sistema usa el valor por defecto (retirado después en el cambio `sin-url-por-defecto`)

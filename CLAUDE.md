@@ -14,13 +14,14 @@ Este proyecto usa OpenSpec. Las especificaciones vigentes están en `openspec/sp
 ## Comandos útiles
 
 - Ejecutar la app: `python mi_cotizador.py` (requiere PocketBase en marcha).
-- PocketBase: `cd pocketbase && ./pocketbase.exe serve` (panel en `http://127.0.0.1:8090/_/`).
+- PocketBase: `cd pocketbase && ./pocketbase.exe serve` (muestra en consola la dirección del servidor; el panel está en la ruta `/_/`).
 - Generar el .exe: `python -m PyInstaller --onefile --windowed --name "Mi Cotizador" --paths . mi_cotizador.py`
 
 ## Configuración
 
-- La dirección de PocketBase se define en `.env` (`MI_COTIZADOR_PB_URL`), que va junto al script o al `.exe`. Copiá `.env.example` como `.env`. Una variable de entorno del sistema tiene prioridad.
+- La dirección de PocketBase se define en `.env` (`MI_COTIZADOR_PB_URL`), que va junto al script o al `.exe`. Copiá `.env.example` como `.env`. Una variable de entorno del sistema tiene prioridad. No hay dirección por defecto: sin configurarla, la app avisa y no se conecta.
 - `.env` no se versiona y no debe contener contraseñas ni secretos que no hagan falta.
+- No escribir la dirección concreta de PocketBase en código, documentación, especificaciones ni mensajes: solo en `.env`.
 
 ## Reglas del proyecto
 
