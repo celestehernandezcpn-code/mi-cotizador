@@ -7,7 +7,7 @@ import sys
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import messagebox, simpledialog, ttk
 
 import pocketbase_client as pb
 
@@ -91,7 +91,7 @@ class PantallaLogin(ttk.Frame):
             return
         finally:
             self.boton.state(["!disabled"])
-        self.app.mostrar_conversor(datos["record"].get("email", email))
+        self.app.iniciar(datos)
 
 
 class PantallaRegistro(ttk.Frame):
@@ -146,6 +146,120 @@ class PantallaRegistro(ttk.Frame):
         self.app.mostrar_login(email)
 
 
+class PantallaAdmin(ttk.Frame):
+    """Panel para listar cuentas, desactivarlas/activarlas y resetear contraseñas."""
+
+    def __init__(self, app: "MiCotizador") -> None:
+        super().__init__(app, padding=15)
+        self.app = app
+        self.usuarios: dict[str, dict] = {}
+
+        ttk.Label(self, text="Panel de administración", font=("Segoe UI", 14, "bold")).grid(
+            row=0, column=0, sticky="w"
+        )
+        ttk.Label(self, text=f"Sesión: {app.email_actual}", foreground="gray").grid(
+            row=1, column=0, sticky="w", pady=(0, 8)
+        )
+
+        self.tabla = ttk.Treeview(
+            self, columns=("email", "rol", "estado"), show="headings", height=10,
+            selectmode="browse",
+        )
+        for col, titulo, ancho in (("email", "Email", 260), ("rol", "Rol", 80), ("estado", "Estado", 100)):
+            self.tabla.heading(col, text=titulo)
+            self.tabla.column(col, width=ancho, anchor="w")
+        self.tabla.grid(row=2, column=0, sticky="nsew")
+        barra = ttk.Scrollbar(self, orient="vertical", command=self.tabla.yview)
+        self.tabla.configure(yscrollcommand=barra.set)
+        barra.grid(row=2, column=1, sticky="ns")
+
+        botones = ttk.Frame(self)
+        botones.grid(row=3, column=0, columnspan=2, pady=(10, 0), sticky="w")
+        ttk.Button(botones, text="Actualizar", command=self.cargar).grid(row=0, column=0, padx=(0, 6))
+        ttk.Button(botones, text="Activar / Desactivar", command=self.alternar_estado).grid(
+            row=0, column=1, padx=6
+        )
+        ttk.Button(botones, text="Resetear contraseña", command=self.resetear).grid(
+            row=0, column=2, padx=6
+        )
+        ttk.Button(botones, text="Abrir conversor", command=app.mostrar_conversor).grid(
+            row=0, column=3, padx=6
+        )
+        ttk.Button(botones, text="Cerrar sesión", command=app.cerrar_sesion).grid(
+            row=0, column=4, padx=(6, 0)
+        )
+        self.cargar()
+
+    def _error(self, e: pb.ErrorPB) -> None:
+        messagebox.showerror("Administración", str(e))
+        if str(e).startswith("No tenés permisos"):
+            self.app.cerrar_sesion()
+
+    def cargar(self) -> None:
+        try:
+            lista = pb.listar_usuarios(self.app.token)
+        except pb.ErrorPB as e:
+            self._error(e)
+            return
+        seleccion = self.tabla.selection()
+        self.tabla.delete(*self.tabla.get_children())
+        self.usuarios = {u["id"]: u for u in lista}
+        for u in lista:
+            self.tabla.insert(
+                "", "end", iid=u["id"],
+                values=(u["email"], u.get("rol") or "usuario",
+                        "Desactivada" if u.get("desactivado") else "Activa"),
+            )
+        if seleccion and seleccion[0] in self.usuarios:
+            self.tabla.selection_set(seleccion[0])
+
+    def _seleccionado(self) -> dict | None:
+        sel = self.tabla.selection()
+        if not sel:
+            messagebox.showinfo("Administración", "Elegí una cuenta de la lista.")
+            return None
+        return self.usuarios[sel[0]]
+
+    def alternar_estado(self) -> None:
+        u = self._seleccionado()
+        if u is None:
+            return
+        if u["id"] == self.app.sesion["record"]["id"]:
+            messagebox.showwarning("Administración", "No podés desactivar tu propia cuenta.")
+            return
+        desactivar = not u.get("desactivado")
+        accion = "desactivar" if desactivar else "activar"
+        if not messagebox.askyesno("Administración", f"¿Querés {accion} la cuenta {u['email']}?"):
+            return
+        try:
+            pb.cambiar_estado(self.app.token, u["id"], desactivar)
+        except pb.ErrorPB as e:
+            self._error(e)
+            return
+        self.cargar()
+
+    def resetear(self) -> None:
+        u = self._seleccionado()
+        if u is None:
+            return
+        nueva = simpledialog.askstring(
+            "Resetear contraseña",
+            f"Nueva contraseña para {u['email']} (mínimo 8 caracteres):",
+            show="•", parent=self,
+        )
+        if nueva is None:
+            return
+        if not 8 <= len(nueva) <= 72:
+            messagebox.showerror("Administración", "La contraseña debe tener entre 8 y 72 caracteres.")
+            return
+        try:
+            pb.resetear_password(self.app.token, u["id"], nueva)
+        except pb.ErrorPB as e:
+            self._error(e)
+            return
+        messagebox.showinfo("Administración", f"Contraseña de {u['email']} actualizada.")
+
+
 class PantallaConversor(ttk.Frame):
     def __init__(self, app: "MiCotizador", usuario: str) -> None:
         super().__init__(app, padding=20)
@@ -155,9 +269,13 @@ class PantallaConversor(ttk.Frame):
         ttk.Label(self, text=f"Sesión: {usuario}", foreground="gray").grid(
             row=0, column=0, sticky="w"
         )
-        ttk.Button(self, text="Cerrar sesión", command=app.cerrar_sesion).grid(
-            row=0, column=1, sticky="e"
-        )
+        barra = ttk.Frame(self)
+        barra.grid(row=0, column=1, sticky="e")
+        if app.es_admin:
+            ttk.Button(barra, text="Panel admin", command=app.mostrar_admin).grid(
+                row=0, column=0, padx=(0, 6)
+            )
+        ttk.Button(barra, text="Cerrar sesión", command=app.cerrar_sesion).grid(row=0, column=1)
 
         ttk.Label(self, text="Monto en pesos (ARS):").grid(row=1, column=0, sticky="w", pady=5)
         self.monto = ttk.Entry(self, width=22)
@@ -204,6 +322,7 @@ class MiCotizador(tk.Tk):
         self.title("Mi Cotizador")
         self.resizable(False, False)
         self.actual: ttk.Frame | None = None
+        self.sesion: dict | None = None
         self.mostrar_login()
 
     def _mostrar(self, pantalla: ttk.Frame) -> None:
@@ -227,10 +346,38 @@ class MiCotizador(tk.Tk):
         self._mostrar(pantalla)
         pantalla.email.focus()
 
-    def mostrar_conversor(self, usuario: str) -> None:
-        self._mostrar(PantallaConversor(self, usuario))
+    # --- sesión -------------------------------------------------------------
+    @property
+    def token(self) -> str:
+        return self.sesion["token"] if self.sesion else ""
+
+    @property
+    def email_actual(self) -> str:
+        return self.sesion["record"].get("email", "") if self.sesion else ""
+
+    @property
+    def es_admin(self) -> bool:
+        r = self.sesion["record"] if self.sesion else {}
+        return r.get("rol") == "admin" and not r.get("desactivado")
+
+    def iniciar(self, datos: dict) -> None:
+        """Guarda la sesión: los admins ven primero el panel, el resto el conversor."""
+        self.sesion = datos
+        if self.es_admin:
+            self.mostrar_admin()
+        else:
+            self.mostrar_conversor()
+
+    def mostrar_conversor(self) -> None:
+        self._mostrar(PantallaConversor(self, self.email_actual))
+
+    def mostrar_admin(self) -> None:
+        if not self.es_admin:  # defensa extra: el servidor igualmente rechaza a los no admin
+            return
+        self._mostrar(PantallaAdmin(self))
 
     def cerrar_sesion(self) -> None:
+        self.sesion = None
         self.mostrar_login()
 
 

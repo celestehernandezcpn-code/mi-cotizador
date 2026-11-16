@@ -8,8 +8,9 @@ dist/
 build/
 *.spec
 
-# PocketBase (binario y base de datos locales)
-pocketbase/
+# PocketBase: se versionan las migraciones (pb_migrations/), no el binario ni los datos
+pocketbase/*
+!pocketbase/pb_migrations/
 
 # Datos del usuario generados por la app
 historial.txt

@@ -12,12 +12,15 @@ class ErrorPB(Exception):
     """Error legible para mostrar al usuario."""
 
 
-def _post(ruta: str, datos: dict) -> dict:
+def _pedir(metodo: str, ruta: str, datos: dict | None = None, token: str = "") -> dict:
+    cabeceras = {"Content-Type": "application/json"}
+    if token:
+        cabeceras["Authorization"] = token
     req = urllib.request.Request(
         f"{PB_URL}{ruta}",
-        data=json.dumps(datos).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
+        data=None if datos is None else json.dumps(datos).encode("utf-8"),
+        headers=cabeceras,
+        method=metodo,
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -51,16 +54,60 @@ def _mensaje_error(codigo: int, cuerpo: dict) -> str:
             partes.append(msg)
         return "\n".join(partes)
     if codigo == 400:
-        return "Email o contraseña incorrectos."
+        return "Email o contraseña incorrectos, o la cuenta está desactivada."
+    if codigo in (401, 403):
+        return "No tenés permisos para hacer esto. Volvé a iniciar sesión."
     return cuerpo.get("message") or f"Error del servidor ({codigo})."
+
+
+def _post(ruta: str, datos: dict) -> dict:
+    return _pedir("POST", ruta, datos)
+
+
+def listar_usuarios(token: str) -> list[dict]:
+    """Lista todas las cuentas (solo funciona para un admin)."""
+    items, pagina = [], 1
+    while True:
+        r = _pedir(
+            "GET",
+            f"/api/collections/{COLECCION}/records?perPage=200&page={pagina}&sort=email",
+            token=token,
+        )
+        items += r["items"]
+        if pagina >= r["totalPages"]:
+            return items
+        pagina += 1
+
+
+def cambiar_estado(token: str, usuario_id: str, desactivado: bool) -> dict:
+    return _pedir(
+        "PATCH",
+        f"/api/collections/{COLECCION}/records/{usuario_id}",
+        {"desactivado": desactivado},
+        token,
+    )
+
+
+def resetear_password(token: str, usuario_id: str, nueva: str) -> dict:
+    return _pedir(
+        "PATCH",
+        f"/api/collections/{COLECCION}/records/{usuario_id}",
+        {"password": nueva, "passwordConfirm": nueva},
+        token,
+    )
 
 
 def iniciar_sesion(email: str, password: str) -> dict:
     """Devuelve {'token': ..., 'record': {...}} o lanza ErrorPB."""
-    return _post(
-        f"/api/collections/{COLECCION}/auth-with-password",
-        {"identity": email, "password": password},
-    )
+    try:
+        return _post(
+            f"/api/collections/{COLECCION}/auth-with-password",
+            {"identity": email, "password": password},
+        )
+    except ErrorPB as e:
+        if str(e).startswith("No tenés permisos"):  # authRule: cuenta desactivada
+            raise ErrorPB("Tu cuenta está desactivada. Consultá con un administrador.") from None
+        raise
 
 
 def registrar(email: str, password: str, password_confirm: str) -> dict:
