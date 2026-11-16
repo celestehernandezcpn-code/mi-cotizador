@@ -2,11 +2,14 @@
 
 Requiere iniciar sesión con un usuario de PocketBase antes de abrir el conversor.
 """
+import queue
 import re
+import threading
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, simpledialog, ttk
 
+import cotizacion as ct
 import pocketbase_client as pb
 
 
@@ -333,18 +336,75 @@ class PantallaConversor(ttk.Frame):
         self.monto.grid(row=1, column=1, pady=5, padx=(10, 0))
 
         ttk.Label(self, text="Cotización del dólar:").grid(row=2, column=0, sticky="w", pady=5)
-        self.cotizacion = ttk.Entry(self, width=22)
-        self.cotizacion.grid(row=2, column=1, pady=5, padx=(10, 0))
+        fila_cotizacion = ttk.Frame(self)
+        fila_cotizacion.grid(row=2, column=1, pady=5, padx=(10, 0), sticky="w")
+        self.cotizacion = ttk.Entry(fila_cotizacion, width=14)
+        self.cotizacion.grid(row=0, column=0)
+        self.boton_actualizar = ttk.Button(
+            fila_cotizacion, text="Actualizar", command=self.actualizar_cotizacion
+        )
+        self.boton_actualizar.grid(row=0, column=1, padx=(6, 0))
+        self.estado_cotizacion = ttk.Label(self, text="", foreground="gray", wraplength=330)
+        self.estado_cotizacion.grid(row=3, column=0, columnspan=2, sticky="w")
 
         ttk.Button(self, text="Convertir", command=self.convertir).grid(
-            row=3, column=0, columnspan=2, pady=12
+            row=4, column=0, columnspan=2, pady=12
         )
 
         self.resultado = ttk.Label(self, text="Resultado: —", font=("Segoe UI", 13, "bold"))
-        self.resultado.grid(row=4, column=0, columnspan=2)
+        self.resultado.grid(row=5, column=0, columnspan=2)
 
         app.bind("<Return>", lambda _e: self.convertir())
         self.monto.focus()
+        self._consultando = False
+        self.actualizar_cotizacion()
+
+    def actualizar_cotizacion(self) -> None:
+        """Pide el dólar oficial en segundo plano; una sola consulta a la vez."""
+        if self._consultando:
+            return
+        self._consultando = True
+        self.boton_actualizar.state(["disabled"])
+        self.estado_cotizacion.config(text="Obteniendo la cotización del dólar oficial…", foreground="gray")
+        cola: queue.Queue = queue.Queue()
+
+        def trabajo() -> None:
+            try:
+                cola.put(("ok", ct.obtener_cotizacion_oficial()))
+            except ct.ErrorCotizacion as e:
+                cola.put(("error", str(e)))
+            except Exception:  # cualquier fallo inesperado no debe dejar la pantalla bloqueada
+                cola.put(("error", "No se pudo obtener la cotización."))
+
+        threading.Thread(target=trabajo, daemon=True).start()
+        self._esperar_cotizacion(cola)
+
+    def _esperar_cotizacion(self, cola: "queue.Queue") -> None:
+        try:
+            if not self.winfo_exists():  # se salió de la pantalla: se descarta el resultado
+                return
+            try:
+                tipo, dato = cola.get_nowait()
+            except queue.Empty:
+                self.after(100, self._esperar_cotizacion, cola)
+                return
+            self._consultando = False
+            self.boton_actualizar.state(["!disabled"])
+            if tipo == "ok":
+                venta, fecha = dato
+                self.cotizacion.delete(0, tk.END)
+                self.cotizacion.insert(0, formatear(venta))
+                cuando = ct.fecha_legible(fecha)
+                self.estado_cotizacion.config(
+                    text="Dólar oficial (venta)" + (f" · actualizado {cuando}" if cuando else ""),
+                    foreground="gray",
+                )
+            else:
+                self.estado_cotizacion.config(
+                    text=f"{dato} Podés ingresarla a mano.", foreground="firebrick"
+                )
+        except tk.TclError:  # la ventana se cerró mientras se esperaba
+            return
 
     def convertir(self) -> None:
         try:
