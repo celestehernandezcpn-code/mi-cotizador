@@ -4,6 +4,11 @@ context: |
   Language: Spanish
   All artifacts must be written in Spanish.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Proyecto: Mi Cotizador, app de escritorio en Python (tkinter) para Windows,
+  empaquetada con PyInstaller. Las cuentas viven en PocketBase (colección users,
+  con rol y desactivado); la seguridad se impone con reglas de PocketBase
+  definidas en pocketbase/pb_migrations/. Archivos principales: mi_cotizador.py
+  y pocketbase_client.py.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
