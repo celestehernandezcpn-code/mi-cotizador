@@ -17,6 +17,11 @@ Este proyecto usa OpenSpec. Las especificaciones vigentes están en `openspec/sp
 - PocketBase: `cd pocketbase && ./pocketbase.exe serve` (panel en `http://127.0.0.1:8090/_/`).
 - Generar el .exe: `python -m PyInstaller --onefile --windowed --name "Mi Cotizador" --paths . mi_cotizador.py`
 
+## Configuración
+
+- La dirección de PocketBase se define en `.env` (`MI_COTIZADOR_PB_URL`), que va junto al script o al `.exe`. Copiá `.env.example` como `.env`. Una variable de entorno del sistema tiene prioridad.
+- `.env` no se versiona y no debe contener contraseñas ni secretos que no hagan falta.
+
 ## Reglas del proyecto
 
 - La seguridad de las cuentas la imponen las reglas de PocketBase (`pocketbase/pb_migrations/`), no la interfaz.

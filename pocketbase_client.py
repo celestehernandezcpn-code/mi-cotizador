@@ -1,10 +1,47 @@
 """Cliente mínimo de PocketBase (solo biblioteca estándar) para iniciar sesión y registrarse."""
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
-PB_URL = os.environ.get("MI_COTIZADOR_PB_URL", "http://127.0.0.1:8090").rstrip("/")
+URL_POR_DEFECTO = "http://127.0.0.1:8090"
+
+
+def carpeta_base() -> Path:
+    """Carpeta del .exe (si está empaquetado) o del script."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).resolve().parent
+
+
+def leer_env(ruta: Path) -> dict[str, str]:
+    """Lee un archivo .env simple (CLAVE=valor; ignora vacías y comentarios)."""
+    valores: dict[str, str] = {}
+    try:
+        texto = ruta.read_text(encoding="utf-8-sig")
+    except OSError:
+        return valores
+    for linea in texto.splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, _, valor = linea.partition("=")
+        valor = valor.strip()
+        if len(valor) >= 2 and valor[0] == valor[-1] and valor[0] in "\"'":
+            valor = valor[1:-1]
+        valores[clave.strip()] = valor
+    return valores
+
+
+def resolver_url(entorno: dict, env_archivo: dict) -> str:
+    """Prioridad: variable de entorno > .env > valor por defecto (vacío = no definido)."""
+    url = entorno.get("MI_COTIZADOR_PB_URL") or env_archivo.get("MI_COTIZADOR_PB_URL")
+    return (url or URL_POR_DEFECTO).rstrip("/")
+
+
+PB_URL = resolver_url(os.environ, leer_env(carpeta_base() / ".env"))
 COLECCION = "users"
 
 
