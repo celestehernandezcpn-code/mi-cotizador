@@ -8,5 +8,8 @@ dist/
 build/
 *.spec
 
+# PocketBase (binario y base de datos locales)
+pocketbase/
+
 # Datos del usuario generados por la app
 historial.txt
