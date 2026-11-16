@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Resultado de compilar el .exe (se regenera con PyInstaller)
+dist/
+build/
+*.spec
+
+# Datos del usuario generados por la app
+historial.txt
