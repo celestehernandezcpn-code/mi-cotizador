@@ -35,6 +35,7 @@ Este proyecto usa OpenSpec. Las especificaciones vigentes están en `openspec/sp
 - `pruebas/automatizar_conversiones.py` abre la app, inicia sesión con un usuario de prueba, hace 10 conversiones con montos distintos, verifica cada resultado y guarda una captura de cada una en `capturas_prueba/` (no se versiona).
 - Corre contra un PocketBase **temporal** que el propio programa levanta y descarta; nunca toca la base real. El usuario de prueba tiene contraseña aleatoria por ejecución.
 - Uso: `python -m pip install -r pruebas/requirements.txt` y luego `python pruebas/automatizar_conversiones.py [--cotizacion 1580]`. Requiere `pocketbase/pocketbase.exe` y Windows.
+- Ejecutable autónomo (`dist/Prueba Mi Cotizador.exe`, incluye PocketBase y las migraciones): `python -m PyInstaller --onefile --console --name "Prueba Mi Cotizador" --paths . --hidden-import mi_cotizador --hidden-import pocketbase_client --hidden-import cotizacion --hidden-import PIL.ImageGrab --add-data "pocketbase\pocketbase.exe;pocketbase" --add-data "pocketbase\pb_migrations;pocketbase\pb_migrations" --add-data "pocketbase\LICENSE.md;pocketbase" pruebas\automatizar_conversiones.py`. Las capturas se guardan junto al `.exe`.
 
 ## Reglas del proyecto
 

@@ -26,7 +26,12 @@ import time
 import urllib.request
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):  # ejecutable de PyInstaller: PocketBase y migraciones van adentro
+    RAIZ = Path(sys._MEIPASS)  # archivos incluidos en el ejecutable
+    CARPETA_SALIDA = Path(sys.executable).parent  # las capturas se guardan junto al .exe
+else:
+    RAIZ = Path(__file__).resolve().parent.parent
+    CARPETA_SALIDA = RAIZ
 POCKETBASE = RAIZ / "pocketbase" / "pocketbase.exe"
 MIGRACIONES = RAIZ / "pocketbase" / "pb_migrations"
 EMAIL_PRUEBA = "usuario.prueba@example.test"
@@ -105,7 +110,7 @@ def nombre_captura(n: int, monto: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Prueba automática de Mi Cotizador con capturas.")
-    ap.add_argument("--salida", default=str(RAIZ / "capturas_prueba"), help="carpeta de las capturas")
+    ap.add_argument("--salida", default=str(CARPETA_SALIDA / "capturas_prueba"), help="carpeta de las capturas")
     ap.add_argument("--cotizacion", default="", help="fija la cotización en vez de la automática")
     args = ap.parse_args()
 
@@ -131,7 +136,8 @@ def main() -> int:
         proceso, url = levantar_pocketbase(datos)
         # La app lee la dirección del entorno antes que del .env: se apunta a la base temporal.
         os.environ["MI_COTIZADOR_PB_URL"] = url
-        sys.path.insert(0, str(RAIZ))
+        if not getattr(sys, "frozen", False):
+            sys.path.insert(0, str(RAIZ))
         import mi_cotizador as m
         import pocketbase_client as pb
         from tkinter import messagebox
@@ -215,4 +221,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    codigo = main()
+    # Abierto con doble clic como .exe, la consola se cerraría sola: se espera para poder leer el informe.
+    if getattr(sys, "frozen", False):
+        try:
+            input("\nPresioná Enter para cerrar...")
+        except (EOFError, OSError, RuntimeError):  # sin consola interactiva: no hay nadie que pulse Enter
+            pass
+    sys.exit(codigo)
