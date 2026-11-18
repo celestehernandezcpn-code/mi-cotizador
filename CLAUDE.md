@@ -23,6 +23,13 @@ Este proyecto usa OpenSpec. Las especificaciones vigentes están en `openspec/sp
 - `.env` no se versiona y no debe contener contraseñas ni secretos que no hagan falta.
 - No escribir la dirección concreta de PocketBase en código, documentación, especificaciones ni mensajes: solo en `.env`.
 
+## Servidor MCP de PocketBase (herramienta de desarrollo)
+
+- `mcp_pocketbase/servidor.py` expone la base local a Claude Code, **solo lectura**: `listar_colecciones`, `ver_coleccion`, `listar_registros` y `ver_registro`. Está registrado en `.mcp.json` y usa el entorno virtual `.venv`.
+- Instalación: `python -m venv .venv` y luego `.venv\Scripts\python.exe -m pip install -r mcp_pocketbase/requirements.txt`.
+- La dirección sale de `MI_COTIZADOR_PB_URL` (`.env`). Las credenciales de superusuario van en `.env.mcp` (copiar `.env.mcp.example`), preferentemente un token. `.env.mcp` no se versiona y nunca debe copiarse junto al `.exe`.
+- No lee colecciones del sistema (prefijo `_`). Para escribir datos no hay herramientas a propósito: los cambios van por migraciones o por el panel de PocketBase.
+
 ## Reglas del proyecto
 
 - La seguridad de las cuentas la imponen las reglas de PocketBase (`pocketbase/pb_migrations/`), no la interfaz.

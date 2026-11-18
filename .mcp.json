@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pocketbase": {
+      "command": ".venv/Scripts/python.exe",
+      "args": ["mcp_pocketbase/servidor.py"]
+    }
+  }
+}

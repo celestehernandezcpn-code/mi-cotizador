@@ -1,5 +1,6 @@
-# Configuración local (se versiona solo .env.example)
+# Configuración local (se versionan solo los .example)
 .env
+.env.mcp
 
 # Python
 __pycache__/
