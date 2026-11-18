@@ -30,6 +30,12 @@ Este proyecto usa OpenSpec. Las especificaciones vigentes están en `openspec/sp
 - La dirección sale de `MI_COTIZADOR_PB_URL` (`.env`). Las credenciales de superusuario van en `.env.mcp` (copiar `.env.mcp.example`), preferentemente un token. `.env.mcp` no se versiona y nunca debe copiarse junto al `.exe`.
 - No lee colecciones del sistema (prefijo `_`). Para escribir datos no hay herramientas a propósito: los cambios van por migraciones o por el panel de PocketBase.
 
+## Prueba automática con capturas
+
+- `pruebas/automatizar_conversiones.py` abre la app, inicia sesión con un usuario de prueba, hace 10 conversiones con montos distintos, verifica cada resultado y guarda una captura de cada una en `capturas_prueba/` (no se versiona).
+- Corre contra un PocketBase **temporal** que el propio programa levanta y descarta; nunca toca la base real. El usuario de prueba tiene contraseña aleatoria por ejecución.
+- Uso: `python -m pip install -r pruebas/requirements.txt` y luego `python pruebas/automatizar_conversiones.py [--cotizacion 1580]`. Requiere `pocketbase/pocketbase.exe` y Windows.
+
 ## Reglas del proyecto
 
 - La seguridad de las cuentas la imponen las reglas de PocketBase (`pocketbase/pb_migrations/`), no la interfaz.

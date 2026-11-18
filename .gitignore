@@ -2,6 +2,9 @@
 .env
 .env.mcp
 
+# Capturas generadas por pruebas/automatizar_conversiones.py
+capturas_prueba/
+
 # Python
 __pycache__/
 *.pyc
